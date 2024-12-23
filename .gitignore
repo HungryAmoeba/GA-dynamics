@@ -169,3 +169,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# don't store data and deeplabcut stuff
+.DS_Store
+Hagfish-charles-2024-12-17/
+data/
+# hydra logs
+outputs/ 
