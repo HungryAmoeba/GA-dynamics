@@ -3,25 +3,29 @@
 ## Setup Instructions
 
 1. Clone the repository:
-    ```sh
-    git clone https://github.com/HungryAmoeba/GA-dynamics.git
-    cd geom_algebra_sims
-    ```
+
+   ```sh
+   git clone https://github.com/HungryAmoeba/GA-dynamics.git
+   cd geom_algebra_sims
+   ```
 
 2. Create and activate a virtual environment:
-    ```sh
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+
+   ```sh
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
 3. Install the required dependencies:
-    ```sh
-    pip install -r requirements.txt
-    ```
+
+   ```sh
+   pip install -r requirements.txt
+   ```
 
 ## Running the Main Program
 
 To run the main program from the command line, use:
+
 ```sh
 python main.py
 ```
@@ -29,7 +33,7 @@ python main.py
 This generates a simulation and stores a 3D rendering of the dynamics, representations, and the coordinates of the model. Several geometries are available for selection:
 
 ```yaml
-geometry: 
+geometry:
     type: "helical"  # Options: "helical", "overhand_knot", "trefoil"
 
 # General settings
@@ -74,9 +78,11 @@ dynamics:
 ### Overriding Config Parameters
 
 You can override configuration parameters using Hydra. For example:
+
 ```sh
-python main.py parameter_name=value
+python main.py geometry.type=overhand_knot geometry_params.extension.num_nodes_head=0 geometry_params.extension.num_nodes_tail=0
 ```
+
 ### Using a Different Configuration File
 
 To use a different configuration file with Hydra, you can specify the path to the new config file using the `--config-path` and `--config-name` options. For example:

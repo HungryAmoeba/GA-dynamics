@@ -1,16 +1,17 @@
 import numpy as np
 
-def push_pos_towards_tail(pos, num_for_grad = 2):
+
+def push_pos_towards_tail(pos, num_for_grad=2):
     # the tail is the last node (node with the highest number)
     pos = pos.copy()
     nodes = list(pos.keys())
     num_nodes = len(nodes)
     for node_num in range(num_nodes - 1):
         pos[node_num] = pos[node_num + 1]
-    
+
     # to update the last node, find the average gradient of the closest num_for_grad nodes
     grad = np.zeros(3)
-    for node_num in range(num_nodes - num_for_grad-1, num_nodes-1):
+    for node_num in range(num_nodes - num_for_grad - 1, num_nodes - 1):
         delta = np.array(pos[node_num]) - np.array(pos[node_num - 1])
         grad += delta
     grad /= num_for_grad
@@ -20,7 +21,9 @@ def push_pos_towards_tail(pos, num_for_grad = 2):
     pos[nodes[num_nodes - 1]] = new_final_pos
     return pos
 
-def push_pos_towards_head(pos, num_for_grad = 2):
+
+def push_pos_towards_head(pos, num_for_grad=1):
+
     # push the nodes towards the head (node with the lowest number)
     pos = pos.copy()
     nodes = list(pos.keys())
@@ -39,26 +42,27 @@ def push_pos_towards_head(pos, num_for_grad = 2):
     new_final_pos = np.array(pos[0]) - grad
     # make new_final_pos a tuple of type float, not np.float
     new_final_pos = tuple([float(x) for x in new_final_pos])
-    pos[nodes[0]] = new_final_pos
+    pos[0] = new_final_pos
     return pos
 
-def animate_positions(pos, head_push, tail_push, gradient_estimator = 3):
-    '''
+
+def animate_positions(pos, head_push, tail_push, gradient_estimator=3):
+    """
     Animate the positions of a graph by pushing the head and tail nodes
 
     Args:
         pos (dict): Dictionary of node numbers to positions
         head_push (int): Number of nodes to push the head
         tail_push (int): Number of nodes to push the tail
-        gradient_estimator (int): Number of nodes to estimate the direction gradient 
-    
+        gradient_estimator (int): Number of nodes to estimate the direction gradient
+
     Returns:
         list: List of dictionaries of node numbers to positions
-    '''
+    """
     positions_list = []
     positions_list.append(pos.copy())
 
-    # first add the head push, then the tail push at the end 
+    # first add the head push, then the tail push at the end
     for _ in range(head_push):
         pos = push_pos_towards_head(pos, gradient_estimator)
         positions_list.append(pos.copy())
@@ -73,33 +77,67 @@ def animate_positions(pos, head_push, tail_push, gradient_estimator = 3):
         positions_list.append(pos.copy())
 
     return positions_list
-    
+
+
 def constant_center_of_mass(positions_array, center_of_mass):
-    '''
+    """
     Aligns the center of mass of the graph to a constant position
 
     Args:
         positions_array (np.array): array of shape T x N x D where T is the number of frames, N is the number of nodes, and D is the dimension of the positions
         center_of_mass (tuple): the center of mass to shift the graph to
-    '''
+    """
     # calculate the center of mass of the graph
     center_of_mass = np.array(center_of_mass)
     for i in range(len(positions_array)):
-        positions_array[i] += center_of_mass - np.mean(positions_array[i], axis = 0)
+        positions_array[i] += center_of_mass - np.mean(positions_array[i], axis=0)
     return positions_array
 
-def positive_z(pos, z_floor = .5):
-    '''
+
+def positive_z(pos, z_floor=0.5):
+    """
     Shifts the graph so that the lowest node is at min_z
 
     Args:
         pos (dict): Dictionary of node numbers to positions
         z_floor (float): Minimum z value for the lowest node
-    '''
+    """
     min_z = min([pos[node][2] for node in pos])
     for node in pos:
         pos[node] = (pos[node][0], pos[node][1], pos[node][2] - min_z + z_floor)
     return pos
 
 
+def make_constant_z_average(positions_array, z_average=0.5):
+    """
+    Shifts the graph so that the average z value is z_average
 
+    Args:
+        positions_array (np.array): array of shape T x N x D where T is the number of frames, N is the number of nodes, and D is the dimension of the positions
+        z_average (float): Average z value for the graph
+    """
+    for i in range(len(positions_array)):
+        positions_array[i] += z_average - np.mean(positions_array[i][:, 2])
+    return positions_array
+
+
+def rotate_to_flat(positions_array):
+    # we want to rotate the graph so the overall graph is as close to parallel to the x-y plane as possible
+    # to determine the plane the graph is most parallel to, we will use PCA
+    # then we will rotate the graph so that the plane is parallel to the x-y plane
+
+    # import PCA and rotation functions
+    from scipy.spatial.transform import Rotation as R
+    from sklearn.decomposition import PCA
+
+    rotated_positions = []
+    for i in range(len(positions_array)):
+        pca = PCA(n_components=3)
+        pca.fit(positions_array[i])
+        # Get the normal vector to the plane
+        normal_vector = pca.components_[2]
+        # Get the rotation matrix to rotate the normal vector to the z-axis
+        rotation, _ = R.align_vectors([normal_vector], [[0, 0, 1]])
+        # Apply the rotation matrix to the positions
+        rotated_positions.append(rotation.apply(positions_array[i]))
+    return np.array(rotated_positions)
