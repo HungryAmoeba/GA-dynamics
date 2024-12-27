@@ -1,0 +1,10 @@
+type: "helical"
+num_nodes: 50
+orientation: "CCW" # Options: "CCW" or "CW"
+radius: 1
+height: 1
+num_rotations: 2
+
+# see if its necessary to add additional nodes to the geometry
+num_nodes_head: 10
+num_nodes_tail: 10

@@ -1,0 +1,11 @@
+defaults:
+  - geometry: helical # Default geometry
+  - positioning: default_positioning
+  - dynamics: follower
+  - representation: laplacian
+
+# Video rendering settings
+fps: 60
+duration: 10
+output: "trajectories/trajectory.csv"
+resolution: [1420, 1080]

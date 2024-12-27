@@ -4,26 +4,41 @@ import numpy as np
 from einops import rearrange
 
 
-def get_spectral_representation(adjacency, trajectory):
+def get_spectral_representation(adjacency, trajectory, normalized=False):
     """
-    This returns a spectral representation of the trajectory in the Laplacian basis.
+    Returns the spectral representation of the trajectory in the Laplacian basis.
 
     Inputs:
-        adjacency (dict): dictionary of node to list of neighbors
-        trajectory (np.array): array of shape T x N x D where T is the number of frames, N is the number of nodes, and D is the dimension of the positions
+        adjacency (dict): Dictionary of node to list of neighbors
+        trajectory (np.array): Array of shape T x N x D (T: time, N: nodes, D: dimensions)
+        normalized (bool): If True, use the normalized Laplacian
+
+    Returns:
+        dict: {
+            'spectral_representation': np.array of shape T x N x D,
+            'eigenvalues': np.array of eigenvalues,
+            'eigenvectors': np.array of eigenvectors
+        }
     """
     # Get the Laplacian matrix
     G = nx.from_dict_of_lists(adjacency)
-    L = nx.laplacian_matrix(G).toarray()
-    # Get the eigenvectors of the Laplacian matrix
+    L = (
+        nx.normalized_laplacian_matrix(G).toarray()
+        if normalized
+        else nx.laplacian_matrix(G).toarray()
+    )
+
+    # Get the eigenvalues and eigenvectors of the Laplacian matrix
     eigvals, eigvecs = np.linalg.eigh(L)
+
+    # Project the trajectory into the spectral domain
     spectral_representation = np.einsum("tnd,nm->tmd", trajectory, eigvecs)
 
-    return spectral_representation
-
-
-import networkx as nx
-import numpy as np
+    return {
+        "spectral_representation": spectral_representation,
+        "eigenvalues": eigvals,
+        "eigenvectors": eigvecs,
+    }
 
 
 def get_spectral_representation_2(adjacency, trajectory):
@@ -70,9 +85,7 @@ def compress_spectral_rep(spectral_rep, filter_high_freq=0.1, dim_red_method="MD
     low_freq_spectral_rep = spectral_rep[:, :num_high_freq]
 
     # Filter zero eigenvalues for translation invariance
-    import pdb
 
-    pdb.set_trace()
     if kwargs.get("filter_zero_eigenvalues", False):
         print("Filtering zero eigenvalues")
         low_freq_spectral_rep = low_freq_spectral_rep[:, 1:]
@@ -125,8 +138,9 @@ if __name__ == "__main__":
     trajectory = np.random.rand(T, num_nodes, 3)
     # print(trajectory)
     # get the spectral representation
-    spectral_representation = get_spectral_representation(adjacency, trajectory)
+    spectral_representation_dict = get_spectral_representation(adjacency, trajectory)
     # print(spectral_representation)
+    spectral_representation = spectral_representation_dict["spectral_representation"]
     # get the spectral representation using the second function
     spectral_representation_2 = get_spectral_representation_2(adjacency, trajectory)
     # print(spectral_representation_2)

@@ -1,0 +1,6 @@
+type: "wiggle"
+max_freq: 60
+num_freq_components: 10
+wiggle_max: 1
+dt: .2
+# TODO: find the correct parameters to add

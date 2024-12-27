@@ -1,16 +1,39 @@
 import numpy as np
 
-class GraphDynamics:
-    def __init__(self, model, data, pos, adjacency):
-        self.model = model
-        self.data = data
-        self.pos = pos
-        self.adjacency = adjacency
-        self.time_elapsed = 0
-    
-    # TODO: see if its better to make a class to wrap the model and data and data trajectory
+# class GraphDynamics:
+#     def __init__(self, model, data, pos, adjacency):
+#         self.model = model
+#         self.data = data
+#         self.pos = pos
+#         self.adjacency = adjacency
+#         self.time_elapsed = 0
+
+# TODO: see if its better to make a class to wrap the model and data and data trajectory
+
 
 class TrajectoryResampler:
+    """
+    A class to resample a trajectory of reference frames to match a target framerate and total time.
+    Attributes:
+    -----------
+    reference_frames : list
+        A list of reference frames, where each frame is a dictionary mapping node numbers to positions.
+    framerate : float
+        The target framerate for the resampled trajectory.
+    total_time : float
+        The total time duration for the resampled trajectory.
+    num_frames : int
+        The number of original reference frames.
+    target_num_frames : int
+        The target number of frames after resampling.
+    points_between_frames : int
+        The number of interpolated points between each pair of original frames.
+    Methods:
+    --------
+    resample_trajectory(reverse=False):
+        Interpolates frames to match the target framerate and total time. Optionally reverses the trajectory.
+    """
+
     def __init__(self, reference_frames, framerate, total_time):
         self.reference_frames = reference_frames
         self.framerate = framerate
@@ -19,8 +42,8 @@ class TrajectoryResampler:
         self.target_num_frames = int(total_time * framerate)
         self.points_between_frames = self.target_num_frames // self.num_frames
 
-    def resample_trajectory(self, reverse = False):
-        """Interpolate frames to match a target framerate and total time. 
+    def resample_trajectory(self, reverse=False):
+        """Interpolate frames to match a target framerate and total time.
         Linearly interpolates positions to upscale the number of frames.
         """
         num_frames = len(self.reference_frames)
@@ -35,18 +58,17 @@ class TrajectoryResampler:
             end_pos = self.reference_frames[i + 1]
             for j in range(self.points_between_frames):
                 # pos and end_pos are dictionaries of node number to position
-                new_pos = np.zeros((num_nodes,3))
+                new_pos = np.zeros((num_nodes, 3))
                 for node in start_pos:
                     start = np.array(start_pos[node])
                     end = np.array(end_pos[node])
                     pos_at_node = start + (end - start) * j / self.points_between_frames
                     new_pos[node] = pos_at_node
-                    #new_pos[node] = tuple([float(x) for x in pos_at_node])
-                    
+                    # new_pos[node] = tuple([float(x) for x in pos_at_node])
+
                 new_positions.append(new_pos)
-                #new_pos = start_pos + (end_pos - start_pos) * j / self.points_between_frames
-                #new_positions.append(new_pos)
+                # new_pos = start_pos + (end_pos - start_pos) * j / self.points_between_frames
+                # new_positions.append(new_pos)
         if reverse:
             new_positions = new_positions[::-1]
         return np.array(new_positions)
-    

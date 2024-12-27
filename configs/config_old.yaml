@@ -1,0 +1,62 @@
+geometry:
+  type: "helical" # Options: "helical", "overhand_knot", "trefoil"
+
+# General settings
+fps: 60 # Frames per second
+duration: 10 # Duration in seconds
+output: "trajectories/trajectory.csv" # Output file path
+
+# Geometry-specific parameters
+geometry_params:
+  helical:
+    num_nodes: 50
+    orientation: "CCW" # Options: "CCW" or "CW"
+    radius: 1
+    height: 1
+    num_rotations: 2
+
+  overhand_knot:
+    num_nodes: 25
+    num_nodes_linear_extension: 5
+    scale: .5
+
+  trefoil:
+    num_nodes: 25
+    upper_limit: 4.32
+    scale: 1
+
+  path:
+    num_nodes: 10
+    scale: 1
+
+  extension:
+    num_nodes_head: 10
+    num_nodes_tail: 10
+
+# Camera settings and model positioning
+positioning:
+  positive_z: True
+  constant_center_of_mass: True
+  center_of_mass: [0, 0, 2]
+  rotate_to_flat: True
+  gaussian_noise: 0.01
+
+dynamics:
+  head_push: 50
+  tail_push: 50
+  gradient_estimator: 3
+
+representation:
+  laplacian:
+    rep_type: "laplacian"
+    filter_high_freq: .1
+    dim_red_method: "MDS"
+    use_distance_matrix: False
+    filter_zero_eigenvalues: True
+    title: "Laplacian Spectral Representation MDS"
+  laplacian_pca:
+    rep_type: "laplacian"
+    filter_high_freq: .1
+    dim_red_method: "PCA"
+    filter_zero_eigenvalues: True
+    title: "Laplacian Spectral Representation PCA"

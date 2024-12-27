@@ -1,0 +1,5 @@
+positive_z: False
+constant_center_of_mass: True
+center_of_mass: [0, 0, 2]
+rotate_to_flat: True
+gaussian_noise: 0.00

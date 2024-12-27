@@ -1,0 +1,5 @@
+rep_type: "diffusion_wavelet"
+low_pass: False
+dim_red_methods: ["MDS", "PCA"]
+scale_list: [0, 1, 2, 4, 8, 16]
+title: "Diffusion Wavelet Representation"

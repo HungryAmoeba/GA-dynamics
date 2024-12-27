@@ -1,0 +1,5 @@
+type: "ER"
+graph_model: "ER"
+num_nodes: 25
+p: 0.2
+scale: 1

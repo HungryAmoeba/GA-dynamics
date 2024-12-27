@@ -1,0 +1,4 @@
+type: "follower"
+head_push: 50
+tail_push: 50
+gradient_estimator: 3

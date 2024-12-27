@@ -2,12 +2,12 @@ import os
 
 # Define the base data directory
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+CONFIGS_DIR = os.path.join(os.path.dirname(__file__), "..", "configs")
 
 # Define subdirectories
 MODEL_FILES_DIR = os.path.join(DATA_DIR, "model_files")
 REPRESENTATIONS_DIR = os.path.join(DATA_DIR, "representations")
 TRAJECTORIES_DIR = os.path.join(DATA_DIR, "trajectories")
-CONFIGS_DIR = os.path.join(DATA_DIR, "configs")
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 JOINED_VIDEOS_DIR = os.path.join(VIDEOS_DIR, "joined")
 

@@ -49,3 +49,60 @@ def make_movie_of_reps(reps, fps, **kwargs):
     plt.close(fig)  # Close the figure after saving
 
     print(f"Movie saved as {output_file}")
+
+
+def make_spectrogram_movie(spectral_rep, eigenvalues, fps, use_abs=False, **kwargs):
+    """
+    Creates and saves an animated spectrogram with a global color bar for intensity.
+    """
+    from matplotlib import gridspec
+
+    xlabel = kwargs.get("xlabel", "Time")
+    ylabel = kwargs.get("ylabel", "Frequency (Eigenvalues)")
+    title = kwargs.get("title", "Spectrogram")
+    output_file = kwargs.get("output_file", "spectrogram_movie.mp4")
+
+    T, N, D = spectral_rep.shape
+    spectral_rep = np.abs(spectral_rep) if use_abs else spectral_rep ** 2
+
+    fig = plt.figure(figsize=(10, 4 * D))
+    gs = gridspec.GridSpec(D, 2, width_ratios=[50, 1], wspace=0.4)
+    axes = [fig.add_subplot(gs[i, 0]) for i in range(D)]
+    cax = fig.add_subplot(gs[:, 1])
+
+    ims = []
+    ax_labels = ["x", "y", "z"]
+    for i, ax in enumerate(axes):
+        ax.set_title(f"{title} ({ax_labels[i]} coordinate)")
+        ax.set_xlabel(xlabel if i == D - 1 else "")
+        ax.set_ylabel(ylabel)
+        ax.set_ylim(eigenvalues.min(), eigenvalues.max())
+        im = ax.imshow(
+            spectral_rep[0:1, :, i].T,
+            aspect="auto",
+            origin="lower",
+            interpolation="none",
+            extent=[0, 1, eigenvalues.min(), eigenvalues.max()],
+            animated=True,
+            cmap="viridis",
+        )
+        ims.append(im)
+
+    # Add a single color bar
+    cbar = fig.colorbar(ims[0], cax=cax)
+    cbar.set_label("Intensity")
+
+    # Add dynamic time text
+    time_text = fig.text(0.5, 0.02, "", ha="center", fontsize=12)
+
+    def update(frame):
+        for i, im in enumerate(ims):
+            im.set_array(spectral_rep[: frame + 1, :, i].T)
+            im.set_extent([0, frame + 1, eigenvalues.min(), eigenvalues.max()])
+        time_text.set_text(f"Time: {frame}/{T}")
+        return ims + [time_text]
+
+    ani = animation.FuncAnimation(fig, update, frames=T, blit=True)
+    ani.save(output_file, fps=fps, extra_args=["-vcodec", "libx264"])
+    plt.close(fig)
+    print(f"Spectrogram movie saved as {output_file}")

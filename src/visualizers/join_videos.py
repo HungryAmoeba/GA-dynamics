@@ -1,7 +1,7 @@
 from moviepy import VideoFileClip, clips_array
 
 
-def join_videos_side_by_side(video_path1, video_path2, output_path="combined_video.mp4"):
+def join_videos_side_by_side(video_path1, video_path2, output_path="combined_video.mp4", **kwargs):
     """
     Joins two videos side by side and saves the result as a new video.
 
@@ -26,6 +26,7 @@ def join_videos_side_by_side(video_path1, video_path2, output_path="combined_vid
     final_video = clips_array([[video1_resized, video2_resized]])
 
     # Write the result to a file
-    final_video.write_videofile(output_path, codec="libx264", fps=24)
+    fps = kwargs.get("fps", 30)
+    final_video.write_videofile(output_path, codec="libx264", fps=fps)
 
     print(f"Combined video saved as {output_path}")

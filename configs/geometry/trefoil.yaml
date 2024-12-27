@@ -1,0 +1,7 @@
+type: "trefoil"
+num_nodes: 25
+scale: 1
+
+# see if its necessary to add additional nodes to the geometry
+num_nodes_head: 10
+num_nodes_tail: 10

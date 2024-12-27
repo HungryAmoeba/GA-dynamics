@@ -1,0 +1,9 @@
+type: "overhand_knot"
+num_nodes: 25
+num_nodes_linear_extension: 2
+scale: .5
+
+# see if its necessary to add additional nodes to the geometry
+
+num_nodes_head: 10
+num_nodes_tail: 10

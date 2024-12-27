@@ -1,0 +1,7 @@
+rep_type: "laplacian"
+filter_high_freq: 0
+dim_red_methods: ["MDS", "spectogram", "PCA"]
+use_normalized: True
+use_distance_matrix: False
+filter_zero_eigenvalues: True
+title: "Laplacian Spectral Representation"

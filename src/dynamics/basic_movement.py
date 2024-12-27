@@ -1,7 +1,21 @@
 import numpy as np
 
+# import PCA and rotation functions
+from scipy.spatial.transform import Rotation as R
+from sklearn.decomposition import PCA
+
 
 def push_pos_towards_tail(pos, num_for_grad=2):
+    """
+    Adjusts the positions of nodes in a dictionary by pushing each node's position towards the position of the next node,
+    and updates the position of the last node based on the average gradient of the closest nodes.
+    Parameters:
+    pos (dict): A dictionary where keys are node identifiers and values are their positions (tuples of coordinates).
+    num_for_grad (int, optional): The number of closest nodes to consider for calculating the gradient for the last node. Default is 2.
+    Returns:
+    dict: A dictionary with updated positions of nodes.
+    """
+
     # the tail is the last node (node with the highest number)
     pos = pos.copy()
     nodes = list(pos.keys())
@@ -23,6 +37,17 @@ def push_pos_towards_tail(pos, num_for_grad=2):
 
 
 def push_pos_towards_head(pos, num_for_grad=1):
+    """
+    Pushes the positions of nodes towards the head (node with the lowest number).
+    This function updates the positions of nodes in a dictionary by shifting each node's position
+    towards the position of the node with the next lower number. The first node's position is updated
+    based on the average gradient of the closest `num_for_grad` nodes.
+    Parameters:
+    pos (dict): A dictionary where keys are node numbers and values are their positions (tuples of coordinates).
+    num_for_grad (int): The number of closest nodes to consider for calculating the gradient for the first node. Default is 1.
+    Returns:
+    dict: A dictionary with updated positions of nodes.
+    """
 
     # push the nodes towards the head (node with the lowest number)
     pos = pos.copy()
@@ -46,7 +71,29 @@ def push_pos_towards_head(pos, num_for_grad=1):
     return pos
 
 
-def animate_positions(pos, head_push, tail_push, gradient_estimator=3):
+def animate_positions(pos, **kwargs):
+    """
+    Animate the positions of nodes based on the specified type.
+    Parameters:
+        pos (dict): A dictionary where keys are node identifiers and values are their positions.
+        **kwargs: Additional keyword arguments to specify the type of animation and other parameters.
+        Keyword Args:
+        type (str): The type of animation to perform. Supported types are "follower" and "wiggle".
+            - "follower": Calls the animate_positions_follower function.
+            - "wiggle": Converts pos to a numpy array and calls the animate_positions_wiggle function.
+    Returns:
+        list: A list of dictionaries where keys are node identifiers and values are their positions.
+    """
+
+    if kwargs.get("type") == "follower":
+        return animate_positions_follower(pos, **kwargs)
+    if kwargs.get("type") == "wiggle":
+        # convert pos to a numpy array
+        pos_array = np.array([pos[node] for node in pos])
+        return animate_positions_wiggle(pos_array, **kwargs)
+
+
+def animate_positions_follower(pos, head_push, tail_push, gradient_estimator=3, **kwargs):
     """
     Animate the positions of a graph by pushing the head and tail nodes
 
@@ -59,6 +106,7 @@ def animate_positions(pos, head_push, tail_push, gradient_estimator=3):
     Returns:
         list: List of dictionaries of node numbers to positions
     """
+
     positions_list = []
     positions_list.append(pos.copy())
 
@@ -108,6 +156,22 @@ def positive_z(pos, z_floor=0.5):
     return pos
 
 
+def positive_z_trajectory(trajectory, z_floor=0.5):
+    """
+    Adjusts a trajectory by shifting it up so that the lowest node is at min_z
+
+    Args:
+        trajectory (np.array): array of shape T x N x D where T is the number of frames, N is the number of nodes, and D is the dimension of the positions
+        z_floor (float): Minimum z value for the lowest node
+
+    Returns:
+        np.array: array of shape T x N x D where T is the number of frames, N is the number of nodes, and D is the dimension of the positions
+    """
+    global_min_z = np.min(trajectory[:, :, 2])
+    trajectory[:, :, 2] -= global_min_z - z_floor
+    return trajectory
+
+
 def make_constant_z_average(positions_array, z_average=0.5):
     """
     Shifts the graph so that the average z value is z_average
@@ -121,23 +185,109 @@ def make_constant_z_average(positions_array, z_average=0.5):
     return positions_array
 
 
-def rotate_to_flat(positions_array):
-    # we want to rotate the graph so the overall graph is as close to parallel to the x-y plane as possible
-    # to determine the plane the graph is most parallel to, we will use PCA
-    # then we will rotate the graph so that the plane is parallel to the x-y plane
+def rotate_to_flat(positions_array, reference_frame_ind=None):
+    """
+    Rotates a 3D graph so that it is as close to parallel to the x-y plane as possible using PCA.
 
-    # import PCA and rotation functions
-    from scipy.spatial.transform import Rotation as R
-    from sklearn.decomposition import PCA
+    Parameters:
+    positions_array (numpy.ndarray): An array of 3D positions representing the graph.
+    reference_frame_ind (int, optional): The index of the reference frame to use for PCA.
+                                         If None, the middle frame is used. Default is None.
 
-    rotated_positions = []
-    for i in range(len(positions_array)):
-        pca = PCA(n_components=3)
-        pca.fit(positions_array[i])
-        # Get the normal vector to the plane
-        normal_vector = pca.components_[2]
-        # Get the rotation matrix to rotate the normal vector to the z-axis
-        rotation, _ = R.align_vectors([normal_vector], [[0, 0, 1]])
-        # Apply the rotation matrix to the positions
-        rotated_positions.append(rotation.apply(positions_array[i]))
+    Returns:
+    numpy.ndarray: The rotated positions array with the graph parallel to the x-y plane.
+    """
+
+    if reference_frame_ind is None:
+        reference_frame_ind = len(positions_array) // 2
+    reference_frame = positions_array[reference_frame_ind]
+    pca = PCA(n_components=3)
+    pca.fit(reference_frame)
+    # Get the normal vector to the plane
+    normal_vector = pca.components_[2]
+    # Get the rotation matrix to rotate the normal vector to the z-axis
+    rotation, _ = R.align_vectors([normal_vector], [[0, 0, 1]])
+    # Apply the rotation matrix to the positions
+    rotated_positions = [rotation.apply(frame) for frame in positions_array]
     return np.array(rotated_positions)
+
+
+def rotate_to_flat_based_on_ends(positions_array):
+    """
+    Rotates a 3D graph based on the positions at the end of the trajectory so that it is as close to parallel to the x-y plane as possible
+    It is assumed that the shape at the start and the end are almost linear
+    """
+    start_frame = positions_array[30]
+    end_frame = positions_array[-10]
+
+    # get the direction vector of the shape at the start and end of the trajectory
+    derivatives_start = np.diff(start_frame, axis=0).mean(axis=0)
+    derivatives_start = derivatives_start / np.linalg.norm(derivatives_start)
+    derivatives_end = np.diff(end_frame, axis=0).mean(axis=0)
+    derivatives_end = derivatives_end / np.linalg.norm(derivatives_end)
+
+    # get the normal vector to the plane using the cross product of the direction vectors
+    normal_vector = np.cross(derivatives_start, derivatives_end)
+    # normalize the normal vector
+    normal_vector /= np.linalg.norm(normal_vector)
+    # get the rotation matrix to rotate the normal vector to the z-axis
+    rotation, _ = R.align_vectors([normal_vector], [[0, 1, 0]])
+    # Apply the rotation matrix to the positions
+    rotated_positions = [rotation.apply(frame) for frame in positions_array]
+
+    return np.array(rotated_positions)
+
+
+def animate_positions_wiggle(positions_array, final_t=10, coeffs="random", **kwargs):
+    """
+    Wiggle the positions in 3d with random fourier coefficients or specified coefficients
+    Works on a 3D array of positions, which is assumed to be a line graph
+    Ensure sampled frequencies are less than Nyquist frequency
+
+    Inputs:
+        positions_array (np.array): array of shape N x D where N is the number of nodes, and D is the dimension of the positions
+        final_t (int): number of frames to generate
+        dt (float): time step between frames
+        coeffs (str or list): 'random' or a list containing tuples of (freq, amplitude, axis) for each frequency to wiggle
+
+    Returns:
+        list: List of dictionaries of node numbers to positions
+    """
+    nyquist_freq = kwargs.get("max_freq", 60)  # based on resampled FPS of 30
+    max_wiggle = kwargs.get("wiggle_max", 1)
+    num_nodes, num_dims = positions_array.shape
+    node_to_phase = np.linspace(0, 2 * np.pi, num=num_nodes)
+    dt = kwargs.get("dt", 0.2)
+
+    print(f"max wiggle: {max_wiggle}")
+    print(f"dt: {dt}")
+
+    t = np.linspace(0, final_t, num=int(final_t / dt))
+    wiggle = np.zeros((len(t), num_nodes, num_dims))
+    if coeffs == "random":
+        # generate random coefficients
+        coeffs = []
+        num_components = kwargs.get("num_components", 10)
+        for _ in range(num_components):
+            freq = np.random.uniform(0, nyquist_freq)
+            amplitude = np.random.uniform(0, max_wiggle)
+            axis = np.random.choice([0, 1, 2])
+            coeffs.append((freq, amplitude, axis))
+
+    # freq, amplitude, axis define a sinusoidal component to add to the positions
+    for freq, amplitude, axis in coeffs:
+        for i in range(num_nodes):
+            wiggle[:, i, axis] += amplitude * np.sin(freq * t + node_to_phase[i])
+
+    final = positions_array + wiggle
+    # Returns:
+    #    list: List of dictionaries of node numbers to positions
+
+    # make sure its a list of dictionaries
+    final_list = []
+    for i in range(len(final)):
+        pos = {}
+        for j in range(num_nodes):
+            pos[j] = tuple(final[i][j])
+        final_list.append(pos)
+    return final_list
