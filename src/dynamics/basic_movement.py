@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 
 def push_pos_towards_tail(pos, num_for_grad=2):
     """
+    Moves a model towards the tail (last node)
     Adjusts the positions of nodes in a dictionary by pushing each node's position towards the position of the next node,
     and updates the position of the last node based on the average gradient of the closest nodes.
     Parameters:
@@ -20,15 +21,17 @@ def push_pos_towards_tail(pos, num_for_grad=2):
     pos = pos.copy()
     nodes = list(pos.keys())
     num_nodes = len(nodes)
-    for node_num in range(num_nodes - 1):
-        pos[node_num] = pos[node_num + 1]
 
     # to update the last node, find the average gradient of the closest num_for_grad nodes
     grad = np.zeros(3)
-    for node_num in range(num_nodes - num_for_grad - 1, num_nodes - 1):
+    for node_num in range(num_nodes - num_for_grad, num_nodes):
         delta = np.array(pos[node_num]) - np.array(pos[node_num - 1])
         grad += delta
     grad /= num_for_grad
+
+    for node_num in range(num_nodes - 1):
+        pos[node_num] = pos[node_num + 1]
+
     new_final_pos = np.array(pos[num_nodes - 1]) + grad
     # make new_final_pos a tuple of type float, not np.float
     new_final_pos = tuple([float(x) for x in new_final_pos])
@@ -54,16 +57,17 @@ def push_pos_towards_head(pos, num_for_grad=1):
     nodes = list(pos.keys())
     num_nodes = len(nodes)
 
-    for node_num in range(num_nodes - 1, 0, -1):
-        pos[node_num] = pos[node_num - 1]
-
-    # to update the first node, find the average gradient of the closest num_for_grad nodes
+    # first compute the gradient for the first node
     grad = np.zeros(3)
     for node_num in range(num_for_grad):
         delta = np.array(pos[node_num + 1]) - np.array(pos[node_num])
         grad += delta
     grad /= num_for_grad
 
+    for node_num in range(num_nodes - 1, 0, -1):
+        pos[node_num] = pos[node_num - 1]
+
+    # then update the first node using the gradient information
     new_final_pos = np.array(pos[0]) - grad
     # make new_final_pos a tuple of type float, not np.float
     new_final_pos = tuple([float(x) for x in new_final_pos])
@@ -216,9 +220,12 @@ def rotate_to_flat_based_on_ends(positions_array):
     """
     Rotates a 3D graph based on the positions at the end of the trajectory so that it is as close to parallel to the x-y plane as possible
     It is assumed that the shape at the start and the end are almost linear
+
+    Inputs:
+        positions_array (np.array): array of shape T X N x D where T is the number of time points, N is the number of nodes, and D is the dimension of the positions
     """
-    start_frame = positions_array[30]
-    end_frame = positions_array[-10]
+    start_frame = positions_array[0]
+    end_frame = positions_array[-1]
 
     # get the direction vector of the shape at the start and end of the trajectory
     derivatives_start = np.diff(start_frame, axis=0).mean(axis=0)
@@ -231,7 +238,7 @@ def rotate_to_flat_based_on_ends(positions_array):
     # normalize the normal vector
     normal_vector /= np.linalg.norm(normal_vector)
     # get the rotation matrix to rotate the normal vector to the z-axis
-    rotation, _ = R.align_vectors([normal_vector], [[0, 1, 0]])
+    rotation, _ = R.align_vectors([normal_vector], [[0, 0, 1]])
     # Apply the rotation matrix to the positions
     rotated_positions = [rotation.apply(frame) for frame in positions_array]
 
@@ -253,7 +260,7 @@ def animate_positions_wiggle(positions_array, final_t=10, coeffs="random", **kwa
     Returns:
         list: List of dictionaries of node numbers to positions
     """
-    nyquist_freq = kwargs.get("max_freq", 60)  # based on resampled FPS of 30
+    max_freq = kwargs.get("max_freq", 60)  # based on resampled FPS of 30
     max_wiggle = kwargs.get("wiggle_max", 1)
     num_nodes, num_dims = positions_array.shape
     node_to_phase = np.linspace(0, 2 * np.pi, num=num_nodes)
@@ -269,7 +276,7 @@ def animate_positions_wiggle(positions_array, final_t=10, coeffs="random", **kwa
         coeffs = []
         num_components = kwargs.get("num_components", 10)
         for _ in range(num_components):
-            freq = np.random.uniform(0, nyquist_freq)
+            freq = np.random.uniform(0, max_freq)
             amplitude = np.random.uniform(0, max_wiggle)
             axis = np.random.choice([0, 1, 2])
             coeffs.append((freq, amplitude, axis))

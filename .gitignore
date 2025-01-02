@@ -175,4 +175,7 @@ cython_debug/
 Hagfish-charles-2024-12-17/
 data/
 # hydra logs
-outputs/ 
+outputs/
+
+# vs code settings
+.vscode/

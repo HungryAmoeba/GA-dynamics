@@ -30,7 +30,10 @@ from src.representations.laplacian_reps import (
     compress_spectral_rep,
     get_spectral_representation,
 )
+from src.representations.representation_factory import get_representation_instance
 from src.visualizers.join_videos import join_videos_side_by_side
+from src.visualizers.postprocessor import RepresentationPostProcessor
+from src.visualizers.visualize_base import RepresentationVisualizer
 from src.visualizers.visualize_reps import make_movie_of_reps, make_spectrogram_movie
 from src.visualizers.visualize_trajectory import visualize_trajectory
 
@@ -72,7 +75,8 @@ def main(cfg: DictConfig):
     # Resample trajectory
     resampler = TrajectoryResampler(positions_list, framerate=cfg.fps, total_time=cfg.duration)
     trajectory = resampler.resample_trajectory()
-    np.save(os.path.join(TRAJECTORIES_DIR, f"{exp_save_name}.npy"), trajectory)
+    if cfg.save_trajectory:
+        np.save(os.path.join(TRAJECTORIES_DIR, f"{exp_save_name}.npy"), trajectory)
 
     # see if there are any specified changes to location, i.e. constant center of mass
     if cfg.positioning.positive_z:
@@ -91,78 +95,44 @@ def main(cfg: DictConfig):
         model,
         trajectory,
         save=True,
-        filename=os.path.join(VIDEOS_DIR, f"{exp_save_name}.mp4", **cfg),
+        filename=os.path.join(VIDEOS_DIR, f"{exp_save_name}.mp4"),
     )
 
     # make a directory for the representations using the experiment name
     rep_dir = os.path.join(REPRESENTATIONS_DIR, exp_save_name)
     os.makedirs(rep_dir, exist_ok=True)
 
-    # for now, only support one type of representation per job
-    if cfg.representation.rep_type == "laplacian":
-        representation_type = cfg.representation.rep_type
-        spectral_rep_dict = get_spectral_representation(
-            adjacency, trajectory, normalized=cfg.representation.use_normalized
-        )  # TODO: make this take in cfg later
-        spectral_rep = spectral_rep_dict["spectral_representation"]
-        np.save(os.path.join(rep_dir, f"{representation_type}_{exp_save_name}.npy"), spectral_rep)
-        # make and save a movie of the spectral representation
-        # now compress the spectral representation
-        for dim_red_method in cfg.representation.dim_red_methods:
-            if dim_red_method == "spectogram":
-                compressed_spectral_rep = spectral_rep
-                eigenvalues = spectral_rep_dict["eigenvalues"]
-                # see if filter zero eigenvalue
-                if cfg.representation.filter_zero_eigenvalues:
-                    print("Filtering zero eigenvalues")
-                    compressed_spectral_rep = compressed_spectral_rep[:, 1:, :]
-                    eigenvalues = eigenvalues[1:]
-                make_spectrogram_movie(
-                    spectral_rep,
-                    eigenvalues,
-                    fps=cfg.fps,
-                    output_file=os.path.join(
-                        rep_dir, f"{representation_type}_{dim_red_method}_{exp_save_name}.mp4"
-                    ),
-                    title="Spectrogram Representation",
-                    use_abs=False,
-                )
-            else:
-                compressed_spectral_rep = compress_spectral_rep(
-                    spectral_rep,
-                    dim_red_method=dim_red_method,
-                    **{k: v for k, v in cfg.representation.items() if k != "dim_red_method"},
-                )
-                np.save(
-                    os.path.join(
-                        rep_dir, f"{representation_type}_{dim_red_method}_{exp_save_name}.npy"
-                    ),
-                    compressed_spectral_rep,
-                )
-                make_movie_of_reps(
-                    compressed_spectral_rep,
-                    fps=cfg.fps,
-                    output_file=os.path.join(
-                        rep_dir, f"{representation_type}_{dim_red_method}_{exp_save_name}.mp4"
-                    ),
-                    title=cfg.representation.get("title", "Representation Trajectory")
-                    + f" ({dim_red_method})",
-                )
-            # join the videos side by side
-            join_videos_side_by_side(
-                os.path.join(VIDEOS_DIR, f"{exp_save_name}.mp4"),
-                os.path.join(
-                    rep_dir, f"{representation_type}_{dim_red_method}_{exp_save_name}.mp4"
-                ),
-                os.path.join(
-                    JOINED_VIDEOS_DIR,
-                    f"{exp_save_name}_{representation_type}_{dim_red_method}.mp4",
-                ),
-                fps=cfg.fps,
-            )
+    # Step 1: Generate Representation
+    representation = get_representation_instance(
+        cfg, adjacency, trajectory, rep_dir, exp_save_name
+    )
+    spectral_rep, eigenvalues = representation.generate()
 
-    else:
-        raise ValueError(f"Unknown representation type: {representation_type}")
+    # Step 2: Visualize Representation
+    visualizer = RepresentationVisualizer(cfg, rep_dir, exp_save_name)
+    for dim_red_method in cfg.representation.dim_red_methods:
+        print(f"Visualizing {dim_red_method} representation...")
+        if dim_red_method == "spectrogram":
+            if eigenvalues is not None:
+                visualizer.visualize_spectrogram(spectral_rep, eigenvalues)
+            else:
+                print("Skipping spectrogram visualization: eigenvalues are not available.")
+        else:
+            visualizer.visualize_dim_reduction(spectral_rep, dim_red_method)
+
+    # Step 3: Join Videos and Cleanup
+    post_processor = RepresentationPostProcessor(cfg, JOINED_VIDEOS_DIR, exp_save_name)
+    for dim_red_method in cfg.representation.dim_red_methods:
+        representation_video = os.path.join(rep_dir, f"{dim_red_method}_{exp_save_name}.mp4")
+        post_processor.join_videos(
+            os.path.join(VIDEOS_DIR, f"{exp_save_name}.mp4"),
+            representation_video,
+            representation.rep_type,
+            dim_red_method,
+        )
+        post_processor.cleanup([representation_video])
+
+    post_processor.cleanup([os.path.join(VIDEOS_DIR, f"{exp_save_name}.mp4")])
 
     print("Done!")
 
