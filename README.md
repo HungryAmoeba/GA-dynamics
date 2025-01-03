@@ -1,7 +1,7 @@
 # Geometric Algebra Simulations
 
-[!WARNING]
-This README is still under construction! Information is incomplete and hastily described.
+> [!WARNING]  
+> README is still under construction! 
 
 ## Setup Instructions
 
