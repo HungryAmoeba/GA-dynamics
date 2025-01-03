@@ -128,8 +128,8 @@ def get_helical_graph(
         else:
             pos[i] = (
                 radius * np.cos(theta),
-                radius * np.sin(theta),
-                -height * theta / (2 * np.pi),
+                -radius * np.sin(theta),
+                height * theta / (2 * np.pi),
             )
 
     pos, adjacency = extend_graph(pos, num_nodes_head, num_nodes_tail)

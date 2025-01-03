@@ -1,5 +1,8 @@
 # Geometric Algebra Simulations
 
+[!WARNING]
+This README is still under construction! Information is incomplete and hastily described.
+
 ## Setup Instructions
 
 1. Clone the repository:
@@ -12,8 +15,8 @@
 2. Create and activate a virtual environment:
 
    ```sh
-   python3 -m venv venv
-   source venv/bin/activate
+   conda create -n geom
+   conda activate geom
    ```
 
 3. Install the required dependencies:
@@ -24,56 +27,79 @@
 
 ## Running the Main Program
 
-To run the main program from the command line, use:
+This codebase makes use of [hydra](https://hydra.cc) to manage configurations and configuration files. To run the main program from the command line with the default parameters and geometries, simply run:
 
 ```sh
 python main.py
 ```
 
-This generates a simulation and stores a 3D rendering of the dynamics, representations, and the coordinates of the model. Several geometries are available for selection:
+This runs the simulation and (optionally) saves the coordinates over time, a 3D rendering of the dynamics, representations of the dynamics with respect to a chosen basis, and the model. These are stored in data/. Logs and overrides are stored in outputs/. The standard configs is stored in [config.yaml](./configs/config.yaml).
 
-```yaml
-geometry:
-    type: "helical"  # Options: "helical", "overhand_knot", "trefoil"
+### Geometries
 
-# General settings
-fps: 30             # Frames per second
-duration: 10        # Duration in seconds
-output: "trajectories/trajectory.csv"  # Output file path
+Models can be specified from any arbitrary graph topology. This work can take as input any [networkx](https://networkx.org) graph. For convenience, several model geometries configs are given in [the geometry subdirectory](./configs/geometry/):
 
-# Geometry-specific parameters
-geometry_params:
-    helical:
-        num_nodes: 50
-        orientation: "CCW"  # Options: "CCW" or "CW"
-        radius: 1
-        height: 1
-        num_rotations: 2
+#### ER graph
 
-    overhand_knot:
-        num_nodes: 25
-        num_nodes_linear_extension: 15
-        scale: .5
+This generates an Erdos-Renyi random graph. It has two parameters which need to be specified in the config:
 
-    trefoil:
-        num_nodes: 25
-        scale: 2
+- num_nodes - number of nodes
+- p - probability of connecting two nodes
 
-    extension:
-        num_nodes_head: 10
-        num_nodes_tail: 10
+#### Helix graph
 
-# Camera settings and model positioning
-positioning:
-    positive_z: True
+A helix graph is a path graph, and the starting node positioning is based on a parameterized curve.
 
-dynamics:
-    head_push: 50
-    tail_push: 50
-    gradient_estimator: 3
+For $\\theta_i \\in \[0, 2\\pi)$,
 
-# resampling parameters
-```
+$$
+\\text{pos}[\\theta_i] = \\left( r \\cos(\\theta_i), \\pm r \\sin(\\theta_i), \\theta_i \\right)
+$$
+
+where the interval $\[0, 2\\pi)$ is uniformly spaced samples based on the number of nodes and the sign of the second term is determined by the user specified orientation of the helix.
+
+Parameters:
+
+- num_nodes
+- num_linear_extension - the number of nodes to add on to the end of the helix to extend the graph.
+
+#### Overhand knot
+
+The original positioning of the overhand knot is based on a parameterized curve describing a trefoil knot.
+
+The positions coordinates are given by:
+
+$$pos[t] = \\left(\\sin(t) + 2 \\sin(2t), \\cos(t) - 2 \\cos(2t), -\\sin(3t) \\right)$$
+
+where $t$ is sampled from an interval contained in $\[0,2 \\pi)$ to ensure that the ends are accessible. In practice, $[0, 5.5\\pi/4]$ is used as the interval to sample from. Then the loose ends are extended in a straight line.
+
+Parameters:
+
+- num_nodes - the number of nodes to generate positions for.
+- upper_limit - the upper limit for the parameter (t), which controls how close to being closed the trefoil knot is.
+- scale - a scaling factor to adjust the size of the trefoil knot.
+- num_nodes_head - the number of nodes to extend in the direction of the head (node 0)
+- num_nodes_tail - the number of nodes to extend in the direction of the tail (node 0)
+
+#### Path
+
+Initial positioning is from uniformly spaced samples on the x-axis.
+
+Parameters:
+
+- num_nodes
+
+### Dynamics
+
+#### Follower
+
+Follower dynamics apply to path graphs. The geometries defined above specify a static structure. This structure is animated using two types of motions. The first motion moves all nodes towards the front of the path graph. Specifically, the gradient $\\Delta_1$ at the front of the graph is attained by averaging differences in position between the first $k$ pairs of adjacent nodes.
+
+For nodes $v_2, v_3, \\ldots v_n$ the position $x(v_k) := x(v\_{k - 1})$. Then the first position is updated $x(v_1) := x(v_1) + \\Delta_1$.
+
+This procedure is iterated to produce an animation. An analogous procedure may be applied at the other end of the graph to simulate motion in that direction.
+
+Linear interpolation is performed between these snapshots to generate smooth dynamics.
 
 ### Overriding Config Parameters
 

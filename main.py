@@ -117,6 +117,8 @@ def main(cfg: DictConfig):
                 visualizer.visualize_spectrogram(spectral_rep, eigenvalues)
             else:
                 print("Skipping spectrogram visualization: eigenvalues are not available.")
+        if dim_red_method == "oriented_area":
+            visualizer.visualize_oriented_area_movie(spectral_rep)
         else:
             visualizer.visualize_dim_reduction(spectral_rep, dim_red_method)
 

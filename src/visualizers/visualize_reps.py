@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
 
 def make_movie_of_reps(reps, fps, **kwargs):
@@ -106,3 +108,88 @@ def make_spectrogram_movie(spectral_rep, eigenvalues, fps, use_abs=False, **kwar
     ani.save(output_file, fps=fps, extra_args=["-vcodec", "libx264"])
     plt.close(fig)
     print(f"Spectrogram movie saved as {output_file}")
+
+
+def make_oriented_area_movie(area_rep, fps, **kwargs):
+    """
+    Creates an animated movie showing the oriented area representation over time,
+    with a color bar for the actual area values.
+
+    Args:
+        area_rep (np.array): Array of shape (T, N, 3) representing oriented area values.
+        fps (int): Frames per second for the animation.
+        **kwargs: Additional arguments, e.g., output_file.
+    """
+    # raise a ValueError if the area representation is not of shape T x N x 3
+    if len(area_rep.shape) != 3 or area_rep.shape[2] != 3:
+        raise ValueError("The area representation must be of shape (T, N, 3).")
+
+    T, N, _ = area_rep.shape
+
+    max_abs_area = np.max(np.abs(area_rep))
+    if np.isclose(max_abs_area, 0):
+        # make a warning
+        print("The maximum absolute area value is close to zero. The plot may not be informative.")
+        normalized_area = area_rep
+    else:
+        # Normalize the areas to be between -1 and 1 for sizes
+        normalized_area = area_rep / max_abs_area
+
+    # Find the min and max of the actual area values
+    area_min, area_max = np.min(area_rep), np.max(area_rep)
+
+    # Set up the figure and axes (3 stacked subplots)
+    fig, axs = plt.subplots(3, 1, figsize=(15, 8))
+    fig.suptitle("Oriented Area Representation")
+
+    for i, ax in enumerate(axs):
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-1, 1)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(f"Sigma{i+1}")
+
+    # Static x-positions for nodes, y=0 for all rows
+    x = np.linspace(-0.8, 0.8, N)
+    y = np.zeros(N)
+
+    # Create scatter plots for each axis
+    scatter_plots = [axs[i].scatter(x, y, s=50) for i in range(3)]
+
+    # Create a color map and normalizer for the color bar
+    norm = Normalize(vmin=area_min, vmax=area_max)
+    cmap = plt.cm.coolwarm  # Blue to red colormap
+    sm = ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+
+    # Add a color bar to the figure
+    cbar = fig.colorbar(sm, ax=axs, orientation="vertical", fraction=0.02, pad=0.05)
+    cbar.set_label("Oriented Area Value")
+
+    def init():
+        """Initialize scatter plots."""
+        for scatter in scatter_plots:
+            scatter.set_sizes(np.zeros(N))
+            scatter.set_color("gray")
+        return scatter_plots
+
+    def update(frame):
+        """Update scatter plots for each frame."""
+        for i, scatter in enumerate(scatter_plots):
+            # Update sizes based on normalized values
+            sizes = 200 * np.abs(normalized_area[frame, :, i])
+            # Update colors based on actual area values
+            colors = cmap(norm(area_rep[frame, :, i]))
+            scatter.set_sizes(sizes)
+            scatter.set_color(colors)
+        return scatter_plots
+
+    # Create animation
+    ani = animation.FuncAnimation(
+        fig, update, init_func=init, frames=T, interval=1000 / fps, blit=True
+    )
+
+    output_file = kwargs.get("output_file", "oriented_area_movie.mp4")
+    ani.save(output_file, fps=fps, extra_args=["-vcodec", "libx264"])
+    plt.close(fig)
+    print(f"Oriented area movie saved as {output_file}")

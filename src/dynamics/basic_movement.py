@@ -160,7 +160,7 @@ def positive_z(pos, z_floor=0.5):
     return pos
 
 
-def positive_z_trajectory(trajectory, z_floor=0.5):
+def positive_z_trajectory(trajectory, z_floor=0.01):
     """
     Adjusts a trajectory by shifting it up so that the lowest node is at min_z
 

@@ -7,7 +7,11 @@ from einops import rearrange
 from sklearn.decomposition import PCA
 from sklearn.manifold import MDS
 
-from src.visualizers.visualize_reps import make_movie_of_reps, make_spectrogram_movie
+from src.visualizers.visualize_reps import (
+    make_movie_of_reps,
+    make_oriented_area_movie,
+    make_spectrogram_movie,
+)
 
 
 class RepresentationVisualizer:
@@ -71,6 +75,25 @@ class RepresentationVisualizer:
             output_file=os.path.join(self.rep_dir, f"spectrogram_{self.exp_save_name}.mp4"),
             title="Spectrogram Representation",
             use_abs=False,
+        )
+
+    def visualize_oriented_area_movie(self, spectral_rep):
+        """
+        Visualizes the oriented area representation of the spectral data.
+
+        This method creates a movie of the oriented area representation of the spectral data.
+
+        Args:
+            spectral_rep (array-like): The spectral representation to visualize.
+
+        Returns:
+            None
+        """
+        make_oriented_area_movie(
+            spectral_rep,
+            fps=self.cfg.fps,
+            output_file=os.path.join(self.rep_dir, f"oriented_area_{self.exp_save_name}.mp4"),
+            title="Oriented Area Representation",
         )
 
     def visualize_dim_reduction(self, spectral_rep, dim_red_method):

@@ -14,17 +14,21 @@ from src.models.shapes import (
 
 def generate_model(geometry_cfg, xml_path, **kwargs):
     """
-    Generate a MuJoCo model based on the input parameters.
+    Generates a MuJoCo model based on the specified geometry configuration and saves the model to an XML file.
 
     Args:
-        geometry_type (str): Type of geometry to generate.
-        geometry_params (dict): Parameters for generating the geometry.
-        extension_params (dict): Parameters for extending the geometry.
-        positioning_params (dict): Parameters for positioning the geometry.
-        dynamics_params (dict): Parameters for generating dynamics.
+        geometry_cfg (object): Configuration object containing the type and parameters of the geometry.
+        xml_path (str): Path where the generated XML file will be saved.
+        **kwargs: Additional keyword arguments.
+            - resolution (tuple): Resolution for the MuJoCo XML generation. Default is (1420, 1080).
 
     Returns:
-        mujoco.MjModel: MuJoCo model object.
+        model: the MuJoCo model,
+        pos (dict): positions of the nodes,
+        adjacency (dict): An adjacency dictionary representing the graph structure.
+
+    Raises:
+        ValueError: If the geometry type specified in geometry_cfg is unknown.
     """
 
     # Geometry selection

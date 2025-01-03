@@ -1,9 +1,11 @@
+from src.representations.GA_reps import GA_OrientedAreaReps
 from src.representations.laplacian_reps import LaplacianRepresentation
 from src.representations.wavelets import SpectralWaveletRepresentation
 
 REPRESENTATION_CLASSES = {
     "laplacian": LaplacianRepresentation,
     "spectral_wavelet": SpectralWaveletRepresentation,
+    "GA_areas": GA_OrientedAreaReps,
     # "haar_wavelet": HaarWaveletRepresentation,
 }
 

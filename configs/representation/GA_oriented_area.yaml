@@ -1,0 +1,3 @@
+rep_type: "GA_areas"
+dim_red_methods: ["oriented_area"]
+title: "Oriented Areas"
