@@ -1,4 +1,4 @@
-# Geometric Algebra Simulations
+# 3D Dynamics Representations
 
 > [!WARNING]  
 > README is still under construction! 
